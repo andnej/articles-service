@@ -14,6 +14,7 @@ import (
 
 var (
 	gb   gearbox.Gearbox
+	as   article_service.ArticleService
 	port int
 	json jsoniter.API = jsoniter.ConfigCompatibleWithStandardLibrary
 )
@@ -21,13 +22,17 @@ var (
 func SetupTest() {
 	port = rand.Intn(1000) + 5000
 	gb = gearbox.New()
-	gb.Group("/api", Setup(gb))
+	as = article_service.Configure(true)
+	gb.Group("/api", Setup(gb, as))
 	go gb.Start(fmt.Sprintf(":%v", port))
 	<-time.After(20 * time.Millisecond)
 }
 
 func CleanUpTest() {
-	article_service.Reset()
+	articles, _ := as.FindAll()
+	for _, a := range articles {
+		as.Delete(a.Id)
+	}
 	go gb.Stop()
 }
 

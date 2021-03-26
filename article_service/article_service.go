@@ -12,31 +12,48 @@ type Article struct {
 }
 
 var (
-	articles      []*Article  = []*Article{}
-	nextId        int         = 1
-	mu            *sync.Mutex = &sync.Mutex{}
-	NOT_FOUND     int         = -1
-	ERR_NOT_FOUND error       = errors.New("Specified id not found")
+	NOT_FOUND     int   = -1
+	ERR_NOT_FOUND error = errors.New("Specified id not found")
 )
 
-func Reset() {
-	articles = []*Article{}
-	nextId = 1
+type ArticleService interface {
+	Save(article *Article) (*Article, error)
+	FindAll() ([]*Article, error)
+	FindOne(id int) (*Article, error)
+	Delete(id int) (*Article, error)
+	Len() int
 }
 
-func Save(article *Article) (*Article, error) {
-	mu.Lock()
-	defer mu.Unlock()
+type InMemoryArticleService struct {
+	articles []*Article
+	nextId   int
+	mu       *sync.Mutex
+}
+
+func Configure(test bool) ArticleService {
+	var as ArticleService
+	as = &InMemoryArticleService{
+		articles: []*Article{},
+		nextId:   1,
+		mu:       &sync.Mutex{},
+	}
+
+	return as
+}
+
+func (im *InMemoryArticleService) Save(article *Article) (*Article, error) {
+	im.mu.Lock()
+	defer im.mu.Unlock()
 	if article.Id < 1 {
 		newArticle := new(Article)
-		newArticle.Id = nextId
+		newArticle.Id = im.nextId
 		newArticle.Title = article.Title
 		newArticle.Body = article.Body
-		articles = append(articles, newArticle)
-		nextId++
+		im.articles = append(im.articles, newArticle)
+		im.nextId++
 		return newArticle, nil
-	} else if theIndex := index(article.Id); theIndex >= 0 {
-		oldArticle := articles[theIndex]
+	} else if theIndex := im.index(article.Id); theIndex >= 0 {
+		oldArticle := im.articles[theIndex]
 		oldArticle.Title = article.Title
 		oldArticle.Body = article.Body
 		return oldArticle, nil
@@ -45,34 +62,34 @@ func Save(article *Article) (*Article, error) {
 	}
 }
 
-func FindAll() ([]*Article, error) {
-	return articles, nil
+func (im *InMemoryArticleService) FindAll() ([]*Article, error) {
+	return im.articles, nil
 }
 
-func FindOne(id int) (*Article, error) {
-	theIndex := index(id)
+func (im *InMemoryArticleService) FindOne(id int) (*Article, error) {
+	theIndex := im.index(id)
 	if theIndex == NOT_FOUND {
 		return nil, ERR_NOT_FOUND
 	} else {
-		return articles[theIndex], nil
+		return im.articles[theIndex], nil
 	}
 }
 
-func Delete(id int) (*Article, error) {
-	mu.Lock()
-	defer mu.Unlock()
-	theIndex := index(id)
+func (im *InMemoryArticleService) Delete(id int) (*Article, error) {
+	im.mu.Lock()
+	defer im.mu.Unlock()
+	theIndex := im.index(id)
 	if theIndex == NOT_FOUND {
 		return nil, ERR_NOT_FOUND
 	} else {
-		result := articles[theIndex]
-		articles = append(articles[:theIndex], articles[theIndex+1:]...)
+		result := im.articles[theIndex]
+		im.articles = append(im.articles[:theIndex], im.articles[theIndex+1:]...)
 		return result, nil
 	}
 }
 
-func index(id int) int {
-	for index, art := range articles {
+func (im *InMemoryArticleService) index(id int) int {
+	for index, art := range im.articles {
 		if art.Id == id {
 			return index
 		}
@@ -81,6 +98,6 @@ func index(id int) int {
 	return NOT_FOUND
 }
 
-func Len() int {
-	return len(articles)
+func (im *InMemoryArticleService) Len() int {
+	return len(im.articles)
 }
