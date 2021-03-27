@@ -10,5 +10,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/valyala/fasthttp v1.22.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
+	github.com/ztrue/shutdown v0.1.1
 	golang.org/x/sys v0.0.0-20210324051608-47abb6519492 // indirect
+	gopkg.in/thejerf/suture.v4 v4.0.0
 )
